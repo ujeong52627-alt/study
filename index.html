@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학습 앱 템플릿</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==========================================================
+            [1] 기본 설정 및 레이아웃
+            ========================================================== */
+        :root {
+            --bg-gray: #f2f2f2; --primary-blue: #1e7df0; --tab-vocab: #9333ea;
+            --tab-read: #3b82f6; --tab-structure: #1d4ed8; --tab-write: #4f46e5;
+        }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-gray);
+            height: 100vh; height: 100dvh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+        
+        /* 앱 컨테이너 */
+        #app-container {
+            width: 1200px; height: 800px;
+            background: white; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+            overflow: hidden; position: relative;
+        }
+
+        /* 헤더 & 탭 */
+        header {
+            height: 60px;
+            border-bottom: 3px solid #3b82f6;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; background: white;
+            z-index: 10; flex-shrink: 0;
+        }
+        .logo { font-size: 24px; font-weight: bold; color: #374151; }
+        .logo span { color: #2563eb; }
+        .file-info { color: #9ca3af; font-size: 14px; }
+
+        .tabs {
+            display: flex; gap: 5px;
+            background-color: #f3f4f6;
+            padding: 10px 30px 0;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .tab-btn {
+            padding: 12px 25px;
+            border-radius: 12px 12px 0 0;
+            border: none; cursor: pointer;
+            font-weight: bold; color: white;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 16px; opacity: 0.7;
+            transition: all 0.2s;
+            transform: translateY(5px);
+        }
+        .tab-btn.active {
+            opacity: 1;
+            transform: translateY(0);
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+        .tab-vocab { background-color: var(--tab-vocab); }
+        .tab-read { background-color: var(--tab-read); }
+        .tab-structure { background-color: var(--tab-structure); }
+        .tab-write { background-color: var(--tab-write); }
+
+        /* 콘텐츠 영역 */
+        .content-area {
+            flex-grow: 1; position: relative;
+            background-color: #fff;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .screen {
+            display: none;
+            width: 100%; height: 100%;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease-out;
+            overflow: hidden;
+        }
+        .screen.active { display: flex; }
+        .step-screen {
+            display: none;
+            width: 100%; height: 100%;
+            flex-direction: column;
+        }
+        .step-screen.active { display: flex; }
+
+        /* 네비게이션 */
+        .nav-controls {
+            position: absolute;
+            bottom: 30px; left: 30px; right: 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            pointer-events: none; z-index: 50;
+        }
+        .nav-btn {
+            width: 60px; height: 60px;
+            border-radius: 50%; background-color: #facc15;
+            border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            cursor: pointer; pointer-events: auto;
+            display: flex; justify-content: center; align-items: center;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { transform: scale(1.1); background-color: #fbbf24; }
+        .nav-btn:disabled {
+            background-color: #e5e7eb; color: #9ca3af;
+            cursor: not-allowed; transform: none; box-shadow: none;
+        }
+        .dots-indicator {
+            background: rgba(255,255,255,0.8);
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: flex; gap: 12px;
+            pointer-events: auto;
+        }
+        .dot {
+            width: 14px; height: 14px;
+            border-radius: 50%; background-color: #d1d5db;
+            transition: background-color 0.3s;
+        }
+        .dot.active { background-color: #ef4444; transform: scale(1.1); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==========================================================
+            [B] 퀴즈 콘텐츠 스타일
+            ========================================================== */
+        
+        #vocab-step-0 {
+            width: 2000px;
+            height: 1200px;
+            transform-origin: top center; 
+            position: absolute; 
+            top: 0;
+            left: 50%;
+            margin-left: -1000px; 
+            background-color: #fff;
+        }
+
+        .quiz-container {
+            display: flex; flex-direction: column;
+            height: 100%; padding: 0;
+        }
+        #quiz-instruction { 
+            font-size: 32px; font-weight: bold; color: #333; 
+            margin-bottom: 20px; padding: 30px 40px 10px; 
+        }
+
+        .scene-container { 
+            position: relative; flex-grow: 1; 
+            background: url('image/scene_background.png') center bottom no-repeat; 
+            background-size: cover; 
+            overflow: hidden; 
+            border-radius: 20px 20px 0 0; 
+        }
+        
+        #quiz-text-overlay { 
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 20; 
+            background-color: #e0f7fa; padding: 25px 60px; border-radius: 25px; 
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); text-align: center; white-space: nowrap;
+            border: 4px solid #fff;
+        }
+        #quiz-text-overlay .quiz-sentence {
+            font-size: 48px; font-weight: bold; color: #1a1a1a; margin: 0;
+        }
+        
+        .blank-box { 
+            display: inline-block; width: 220px; height: 60px; 
+            border: 4px solid #333; border-radius: 10px; background: white;
+            line-height: 52px; font-size: 40px; vertical-align: middle;
+            transition: all 0.3s; margin: 0 10px;
+        }
+        .blank-box.correct {
+            color: #00b894; border-color: #00b894; background-color: #e6fffa;
+        }
+
+        #learner, #monster { 
+            position: absolute;
+            width: 450px; height: auto; 
+            bottom: 250px; z-index: 10; 
+            animation: float-up-down 4s ease-in-out infinite;
+            transition: all 0.5s; 
+        }
+        #learner { left: 150px; } 
+        #monster { right: 180px; animation-delay: 0.5s; }
+
+        @keyframes float-up-down {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0); }
+        }
+
+        .char-default-size { 
+            width: 486px !important;
+            height: auto !important;
+        }
+        .char-attack-size {
+            width: 594px !important;
+            height: auto !important;
+        }
+
+        @keyframes attack-to-monster {
+            0%   { opacity: 1; left: 350px; top: 50%; }
+            100% { opacity: 0; left: 1500px; top: 50%; }
+        }
+        @keyframes attack-to-learner {
+            0%   { opacity: 1; left: 1500px; top: 50%; }
+            100% { opacity: 0; left: 350px; top: 50%; }
+        }
+
+        #effect { 
+            position: absolute;
+            width: 300px; height: auto;
+            z-index: 20; opacity: 0; 
+            pointer-events: none;
+            transform: translate(-50%, -50%); 
+        }
+
+        #option-wrapper { 
+            position: absolute; bottom: 210px; left: 50%; transform: translateX(-50%); 
+            width: 900px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 30; 
+        }
+        .option-item { 
+            padding: 20px 40px; font-size: 36px;
+            border-radius: 50px; border: 6px solid white; 
+            display: flex; align-items: center; gap: 15px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        .option-item img { width: 40px; height: 40px; }
+        
+        #option-가치 { background-color: #f48fb1; color: white; }
+        #option-보존 { background-color: #fff59d; color: #5d4037; }
+        #option-문화유산 { background-color: #ce93d8; color: white; }
+        
+        .option-item.clicked { transform: scale(0.95); border-width: 15px !important; }
+        .option-item.correct-border { border-color: #00e676 !important; } 
+        .option-item.wrong-border { border-color: #ff1744 !important; } 
+
+        /* 칭찬도장 */
+        #stamp-complete {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 180px;
+            height: auto;
+
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        /* 손가락 가이드: 3회 펄스 후 사라짐 */
+        #finger-guide {
+            position: absolute;
+            bottom: 40px;   /* 내려준 위치 */
+            left: 420px;
+            width: 60px;     /* 50% 축소 */
+            height: auto;
+
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+            z-index: 55;
+        }
+
+        /* 손가락 스케일 펄스 (1초에 1번, 3회 반복) */
+        @keyframes finger-pulse {
+            0%   { transform: scale(0.8); }
+            50%  { transform: scale(1.1); }
+            100% { transform: scale(0.8); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+
+    <header>
+        <div class="logo"><span>메가스터디</span> 초등 문해력</div>
+        <div class="file-info">4개월 2주차_문화유산</div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn tab-vocab" onclick="setTab('vocab')">
+            <i data-lucide="lightbulb" size="18"></i> 어휘랑
+        </button>
+        <button class="tab-btn tab-read" onclick="setTab('read')">
+            <i data-lucide="book-open" size="18"></i> 읽기랑
+        </button>
+        <button class="tab-btn tab-structure" onclick="setTab('structure')">
+            <i data-lucide="layout" size="18"></i> 구조랑
+        </button>
+        <button class="tab-btn tab-write" onclick="setTab('write')">
+            <i data-lucide="pen-tool" size="18"></i> 쓰기랑
+        </button>
+    </div>
+
+    <div class="content-area" id="main-content-area">
+
+        <div id="screen-vocab" class="screen active">
+            
+            <div id="vocab-step-0" class="step-screen active">
+                <div class="quiz-container">
+                    <div id="quiz-instruction">빈칸에 들어갈 알맞은 어휘를 눌러 문장을 완성해 봅시다.</div>
+                    
+                    <div class="scene-container">
+                        <div id="quiz-text-overlay">
+                            <div class="quiz-sentence">
+                                이 그림은 역사적
+                                <span id="answer-text" data-correct-answer="가치">
+                                    <span class="blank-box">?</span>
+                                </span>
+                                이/가 높다.
+                            </div>
+                        </div>
+                        
+                        <img id="learner" src="image/learner_default.png" alt="학습자">
+                        <img id="monster" src="image/monster_default.png" alt="몬스터">
+                        <img id="effect" src="image/effect_learner.png" alt="이펙트">
+
+                        <div id="option-wrapper"> 
+                            <button class="option-item" data-choice="가치" id="option-가치">
+                                <img src="image/star_1.png" alt="별 1"> <strong>가치</strong>
+                            </button>
+                            <button class="option-item" data-choice="보존" id="option-보존">
+                                <img src="image/star_2.png" alt="별 2"> <strong>보존</strong>
+                            </button>
+                            <button class="option-item" data-choice="문화유산" id="option-문화유산">
+                                <img src="image/star_3.png" alt="별 3"> <strong>문화유산</strong>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vocab-step-1" class="step-screen" style="display:none; width:100%; height:100%; justify-content:center; align-items:center;">
+                <h1>다음 단계입니다! 🎉</h1>
+            </div>
+        </div>
+
+        <div id="screen-read" class="screen">
+            <div style="padding:50px;">읽기랑 화면</div>
+        </div>
+        <div id="screen-structure" class="screen">
+            <div style="padding:50px;">구조랑 화면</div>
+        </div>
+        <div id="screen-write" class="screen">
+            <div style="padding:50px;">쓰기랑 화면</div>
+        </div>
+
+    </div>
+
+    <div class="nav-controls">
+        <button class="nav-btn" id="prev-btn" onclick="moveStep(-1)">
+            <i data-lucide="chevron-left" color="#374151" size="32"></i>
+        </button>
+        <div class="dots-indicator" id="dots-container"></div>
+        <button class="nav-btn" id="next-btn" onclick="moveStep(1)" disabled>
+            <i data-lucide="chevron-right" color="#374151" size="32"></i>
+        </button>
+    </div>
+
+    <!-- 칭찬도장 & 손가락 가이드 -->
+    <img id="stamp-complete" src="image/stamp_best.png" alt="칭찬 도장">
+    <img id="finger-guide" src="image/finger_guide.png" alt="손가락 가이드">
+
+</div>
+
+<!-- 음원 요소 -->
+<audio id="audio-intro" src="audio/intro.mp3"></audio>
+<audio id="audio-correct" src="audio/correct.mp3"></audio>
+<audio id="audio-wrong" src="audio/wrong.mp3"></audio>
+<audio id="audio-click-correct" src="audio/clickcorrect.mp3"></audio>
+<audio id="audio-click-wrong" src="audio/clickwrong.mp3"></audio>
+<audio id="audio-complete" src="audio/complete.mp3"></audio>
+
+<script>
+    lucide.createIcons();
+
+    const stepsConfig = { 'vocab': 2, 'read': 2, 'structure': 1, 'write': 1 };
+    let currentTab = 'vocab'; 
+    let currentStep = 0; 
+    let completedState = {}; 
+    let isGameActive = true; 
+
+    let audioIntro, audioCorrect, audioWrong;
+    let audioClickCorrect, audioClickWrong, audioComplete;
+    let introPlayedOnce = false;
+    let introFinished = false;
+
+    let stampComplete;
+    let rewardShown = false;
+    let fingerGuide;
+    let fingerGuideShown = false;
+
+    const learner = document.getElementById('learner');
+    const monster = document.getElementById('monster');
+    const effect = document.getElementById('effect');
+    const answerText = document.getElementById('answer-text');
+    
+    const ATTACK_DELAY = 700; 
+    const REACTION_DELAY = 200; 
+    const WRONG_RESET_DELAY = 700;
+
+    function playAudioSafe(audioObj, resetTime = true) {
+        if (!audioObj) return;
+        try {
+            if (resetTime) audioObj.currentTime = 0;
+            audioObj.play().catch(() => {});
+        } catch(e) {}
+    }
+
+    function setOptionsEnabled(enabled) {
+        document.querySelectorAll('.option-item').forEach(opt => {
+            opt.style.pointerEvents = enabled ? 'auto' : 'none';
+        });
+    }
+
+    function handleScaling() {
+        const gameScreen = document.getElementById('vocab-step-0');
+        const container = document.getElementById('main-content-area');
+        
+        if (gameScreen && container) {
+            const availableWidth = container.clientWidth;
+            const designWidth = 2000;
+            const scale = availableWidth / designWidth;
+            gameScreen.style.transform = `scale(${scale})`;
+        }
+    }
+
+    function cleanAllCharClasses() {
+        learner.classList.remove('char-default-size', 'char-attack-size');
+        monster.classList.remove('char-default-size');
+    }
+
+    // 손가락 가이드: 3회 펄스 후 자동 사라짐
+    function showFingerGuide() {
+        if (!fingerGuide || fingerGuideShown) return;
+        fingerGuideShown = true;
+        fingerGuide.style.opacity = '1';
+        fingerGuide.style.transform = 'scale(0.8)';
+        fingerGuide.style.animation = 'finger-pulse 1s ease-in-out 3';
+
+        fingerGuide.addEventListener('animationend', () => {
+            fingerGuide.style.opacity = '0';
+            fingerGuide.style.animation = 'none';
+        }, { once: true });
+    }
+
+    // ✅ 정답 후 1.7초 뒤에 칭찬도장 + complete.mp3
+    function showCompletionReward() {
+        if (rewardShown) return;
+        rewardShown = true;
+
+        setTimeout(() => {
+            playAudioSafe(audioComplete);
+
+            if (stampComplete) {
+                stampComplete.style.opacity = '1';
+                stampComplete.style.transform = 'scale(1)';
+            }
+        }, 1700); // 1.7초 후 실행
+    }
+
+    function resetGame() {
+        isGameActive = true;
+        setOptionsEnabled(introFinished);
+        
+        cleanAllCharClasses();
+        
+        learner.classList.add('char-default-size');
+        monster.classList.add('char-default-size');
+        
+        learner.src = 'image/learner_default.png'; 
+        monster.src = 'image/monster_default.png'; 
+        
+        effect.style.opacity = '0';
+        effect.style.animation = 'none';
+        
+        document.querySelectorAll('.option-item').forEach(o => { 
+            o.classList.remove('clicked', 'correct-border', 'wrong-border'); 
+            o.style.transform = "scale(1)";
+        });
+    }
+
+    function handleCorrect(selectedElement, word) {
+        isGameActive = false; 
+        
+        const blankBox = answerText.querySelector('.blank-box');
+        blankBox.textContent = word;
+        blankBox.classList.add('correct');
+        
+        setTimeout(() => {
+            playAudioSafe(audioCorrect);
+        }, 1000);
+
+        learner.classList.remove('char-default-size');
+        learner.classList.add('char-attack-size'); 
+        learner.src = 'image/learner_attack.png'; 
+        
+        effect.src = 'image/effect_learner.png'; 
+        effect.style.opacity = '1';
+        effect.style.animation = 'attack-to-monster 1s forwards'; 
+
+        setTimeout(() => {
+            monster.src = 'image/monster_wrong.png'; 
+            effect.style.animation = 'none';
+            effect.style.opacity = '0'; 
+            
+            setTimeout(() => {
+                learner.classList.remove('char-attack-size'); 
+                learner.src = 'image/learner_correct.png'; 
+                showCompletionReward();
+            }, REACTION_DELAY);
+        }, ATTACK_DELAY); 
+
+        completedState[`${currentTab}-${currentStep}`] = true;
+        updateUI();
+    }
+
+    function handleWrong(selectedElement) {
+        isGameActive = false; 
+
+        setTimeout(() => {
+            playAudioSafe(audioWrong);
+        }, 1000);
+        
+        monster.src = 'image/monster_attack.png'; 
+        effect.src = 'image/effect_monster.png'; 
+        effect.style.opacity = '1';
+        effect.style.animation = 'attack-to-learner 1s forwards'; 
+        
+        setTimeout(() => {
+            learner.src = 'image/learner_wrong.png'; 
+            effect.style.animation = 'none';
+            effect.style.opacity = '0'; 
+
+            setTimeout(() => {
+                resetGame();
+            }, WRONG_RESET_DELAY); 
+        }, ATTACK_DELAY); 
+    }
+
+    function handleOptionClick(selectedElement, selectedWord) {
+        if (!isGameActive || !introFinished) return; 
+
+        const correctWord = answerText.getAttribute('data-correct-answer');
+
+        if (selectedWord === correctWord) {
+            playAudioSafe(audioClickCorrect, true);
+        } else {
+            playAudioSafe(audioClickWrong, true);
+        }
+
+        document.querySelectorAll('.option-item').forEach(opt => opt.style.pointerEvents = 'none'); 
+
+        selectedElement.classList.add('clicked');
+        if (selectedWord === correctWord) {
+            selectedElement.classList.add('correct-border');
+        } else {
+            selectedElement.classList.add('wrong-border');
+        }
+        
+        if (selectedWord === correctWord) {
+            handleCorrect(selectedElement, selectedWord);
+        } else {
+            handleWrong(selectedElement);
+        }
+        
+        setTimeout(() => { 
+            if (selectedWord !== correctWord) {
+                 selectedElement.classList.remove('clicked', 'correct-border', 'wrong-border'); 
+            }
+        }, 3000); 
+    }
+    
+    function initQuizLogic() {
+        const options = document.querySelectorAll('#vocab-step-0 .option-item');
+        if (!options.length) return; 
+        
+        options.forEach(option => {
+            option.removeEventListener('click', optionClickHandler);
+            option.addEventListener('click', optionClickHandler);
+        });
+    }
+
+    function optionClickHandler() {
+        const selectedWord = this.getAttribute('data-choice');
+        handleOptionClick(this, selectedWord);
+    }
+
+    function setTab(tab) {
+        currentTab = tab;
+        currentStep = 0;
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.tab-${tab}`).classList.add('active');
+
+        if (tab === 'vocab' && currentStep === 0) {
+            resetGame();
+        }
+        updateUI();
+    }
+
+    function moveStep(dir) {
+        const next = currentStep + dir;
+        const max = stepsConfig[currentTab];
+        if (next >= 0 && next < max) {
+            currentStep = next;
+            if (currentTab === 'vocab' && currentStep === 0) {
+                resetGame();
+            }
+            updateUI();
+        }
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${currentTab}`).classList.add('active');
+        
+        document.querySelectorAll('.step-screen').forEach(el => el.style.display = 'none');
+        const activeStepDiv = document.getElementById(`${currentTab}-step-${currentStep}`);
+        if (activeStepDiv) {
+            activeStepDiv.style.display =
+                (currentTab === 'vocab' && currentStep === 1) ? 'flex' : 'block';
+        }
+
+        const nextBtn = document.getElementById('next-btn');
+        const isCompleted = completedState[`${currentTab}-${currentStep}`];
+        nextBtn.disabled = !isCompleted;
+        document.getElementById('prev-btn').disabled =
+            (currentTab === 'vocab' && currentStep === 0);
+
+        const dots = document.getElementById('dots-container');
+        dots.innerHTML = '';
+        for (let i = 0; i < stepsConfig[currentTab]; i++) {
+            const d = document.createElement('div');
+            d.className = `dot ${i === currentStep ? 'active' : ''}`;
+            dots.appendChild(d);
+        }
+        
+        handleScaling(); 
+    }
+
+    function initIntroOnFirstClick() {
+        const firstClickHandler = () => {
+            if (!introPlayedOnce) {
+                introPlayedOnce = true;
+                playAudioSafe(audioIntro);
+            }
+            window.removeEventListener('click', firstClickHandler);
+        };
+
+        window.addEventListener('click', firstClickHandler);
+    }
+
+    window.addEventListener('load', () => {
+        handleScaling();
+
+        audioIntro        = document.getElementById('audio-intro');
+        audioCorrect      = document.getElementById('audio-correct');
+        audioWrong        = document.getElementById('audio-wrong');
+        audioClickCorrect = document.getElementById('audio-click-correct');
+        audioClickWrong   = document.getElementById('audio-click-wrong');
+        audioComplete     = document.getElementById('audio-complete');
+
+        stampComplete = document.getElementById('stamp-complete');
+        fingerGuide   = document.getElementById('finger-guide');
+
+        if (audioIntro) {
+            audioIntro.addEventListener('ended', () => {
+                introFinished = true;
+                setOptionsEnabled(true);
+            });
+
+            audioIntro.addEventListener('timeupdate', () => {
+                if (!audioIntro.duration) return;
+                const remaining = audioIntro.duration - audioIntro.currentTime;
+                if (!fingerGuideShown && remaining <= 1 && remaining > 0) {
+                    showFingerGuide();
+                }
+            });
+        }
+
+        introFinished = false;
+        setOptionsEnabled(false);
+
+        setTab('vocab'); 
+        initQuizLogic();
+        initIntroOnFirstClick();
+    });
+
+    window.addEventListener('resize', handleScaling);
+</script>
+</body>
+</html>
